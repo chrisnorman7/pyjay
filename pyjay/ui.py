@@ -16,7 +16,7 @@ class MainFrame(wx.Frame):
         super(MainFrame, self).__init__(*args, **kwargs)
         p = wx.Panel(self)
         s = wx.BoxSizer(wx.VERTICAL)
-        self.text = wx.TextCtrl(p, style = wx.TE_MULTILINE | wx.TE_READONLY)
+        self.text = wx.TextCtrl(p, value = 'Usage:\n\n', style = wx.TE_MULTILINE | wx.TE_READONLY)
         self.commands = []
         self.hotkeys = {} # hotkey: command pares.
         for x in dir(commands):

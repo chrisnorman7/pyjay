@@ -1,6 +1,7 @@
 """All commands for the PyJay Application."""
 
 import wx, logging
+from simpleconf.dialogs.wx import SimpleConfWxDialog
 from .config import config
 
 logger = logging.getLogger(__name__)
@@ -334,3 +335,13 @@ class SetOutput(Command):
                 if deck.filename:
                     deck.set_stream(deck.filename)
                     deck.seek(positions[deck], absolute = True)
+
+class Config(Command):
+    """View and edit proram configuration."""
+    def setup(self):
+        self.keys = ['CTRL+,']
+    
+    def run(self, key):
+        """Show the configuration."""
+        frame = SimpleConfWxDialog(config.audio, parent = self.parent)
+        frame.Show(True)
