@@ -47,7 +47,8 @@ class Deck:
     def set_stream(self, filename):
         """Load a stream from the provided filename."""
         self.stream = FileStream(file = filename)
-        self.log_attribute('stream')
+        self.filename = filename
+        self.log_attribute('filename')
         self.set_volume(self.volume)
         self.set_pan(self.pan)
         self.set_frequency(self.frequency)
@@ -90,6 +91,13 @@ class Deck:
     def log_attribute(self, attr):
         """Logs the changing of self.attr."""
         logger.info('Setting %s for %s to %r.', attr, self, getattr(self, attr))
+    
+    def get_position(self):
+        """Get the play position of the stream."""
+        if self.stream:
+            return self.stream.get_position()
+        else:
+            return 0
     
     def seek(self, amount, absolute = False):
         """Set the playback position."""

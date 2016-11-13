@@ -306,3 +306,31 @@ class DeckStop(Command):
             deck = self.parent.right
         deck.pause()
         deck.seek(0, absolute = True)
+
+class SetOutput(Command):
+    """Set the output device to use."""
+    def setup(self):
+        self.keys = ['F12']
+    
+    def run(self, key):
+        """Set the output device."""
+        output = self.parent.output
+        names = output.get_device_names()
+        dlg = wx.SingleChoiceDialog(self.parent, 'Choose a new device for sound output', 'Output Device', names)
+        if dlg.ShowModal() == wx.ID_OK:
+            device = dlg.GetSelection()
+        else:
+            device = None
+        dlg.Destroy()
+        if device is not None:
+            positions = {}
+            for deck in [self.parent.left, self.parent.right]:
+                positions[deck] = deck.get_position()
+            output.free()
+            output = output.__class__()
+            self.parent.output = output
+            output.set_device(device + 1)
+            for deck in [self.parent.left, self.parent.right]:
+                if deck.filename:
+                    deck.set_stream(deck.filename)
+                    deck.seek(positions[deck], absolute = True)
