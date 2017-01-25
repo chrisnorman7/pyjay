@@ -1,9 +1,9 @@
 """App-specific storage."""
 
+import wx
+
 name = 'PyJay'
 __version__ = '0.1'
-
-import wx
 
 app = wx.App()
 app.SetAppName('{} V{}'.format(name, __version__))

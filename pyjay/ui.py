@@ -1,6 +1,7 @@
 """GUI."""
 
-import wx, logging
+import logging
+import wx
 from inspect import isclass
 from sound_lib.output import Output
 from wxgoodies.keys import key_to_str
@@ -9,6 +10,7 @@ from .deck import Deck
 
 logger = logging.getLogger(__name__)
 
+
 class MainFrame(wx.Frame):
     """The main frame."""
     def __init__(self, *args, **kwargs):
@@ -16,14 +18,29 @@ class MainFrame(wx.Frame):
         super(MainFrame, self).__init__(*args, **kwargs)
         p = wx.Panel(self)
         s = wx.BoxSizer(wx.VERTICAL)
-        self.text = wx.TextCtrl(p, value = 'Usage:\n\n', style = wx.TE_MULTILINE | wx.TE_READONLY)
+        self.text = wx.TextCtrl(
+            p,
+            value='Usage:\n\n',
+            style=wx.TE_MULTILINE | wx.TE_READONLY
+        )
         self.commands = []
-        self.hotkeys = {} # hotkey: command pares.
+        self.hotkeys = {}  # hotkey: command pares.
         for x in dir(commands):
             cls = getattr(commands, x)
-            if isclass(cls) and issubclass(cls, commands.Command) and cls is not commands.Command:
+            if isclass(
+                cls
+            ) and issubclass(
+                cls,
+                commands.Command
+            ) and cls is not commands.Command:
                 cmd = cls(self)
-                self.text.AppendText('%s\n%s\n\n' % (cmd.__doc__, ', '.join(cmd.keys)))
+                self.text.AppendText(
+                    '%s\n%s\n\n' % (
+                        cmd.__doc__, ', '.join(
+                            cmd.keys
+                        )
+                    )
+                )
                 self.commands.append(cmd)
                 for key in cmd.keys:
                     self.hotkeys[key] = cmd
@@ -38,7 +55,7 @@ class MainFrame(wx.Frame):
         self.crossfader = 0
         self.output = Output()
         self.text.Bind(wx.EVT_KEY_DOWN, self.on_keydown)
-    
+
     def on_keydown(self, event):
         """Key was pressed."""
         key = key_to_str(event.GetModifiers(), event.GetKeyCode())

@@ -1,23 +1,26 @@
 """All commands for the PyJay Application."""
 
-import wx, logging
+import logging
+import wx
 from simpleconf.dialogs.wx import SimpleConfWxDialog
 from .config import config
 
 logger = logging.getLogger(__name__)
 
+
 class Command:
     """All commands must derive from this class."""
-    
+
     def __init__(self, parent):
         """Initialise with the frame that's running the show."""
         self.parent = parent
-        self.keys = [] # Hotkeys that initialise this command.
+        self.keys = []  # Hotkeys that initialise this command.
         self.setup()
-    
+
     def run(self, key):
         """Actually do something with this command."""
         raise NotImplementedError
+
 
 class MasterVolume(Command):
     """Alter the master volume."""
@@ -25,17 +28,30 @@ class MasterVolume(Command):
         self.key_up = '='
         self.key_down = '-'
         self.keys = [self.key_up, self.key_down]
-    
+
     def run(self, key):
         """Alter the master volume."""
         if key == self.key_up:
-            volume = min(100.0, self.parent.master_volume + config.audio['change_master_volume'])
+            volume = min(
+                100.0,
+                self.parent.master_volume +
+                config.audio['change_master_volume']
+            )
         else:
-            volume = max(0.0, self.parent.master_volume - config.audio['change_master_volume'])
+            volume = max(
+                0.0,
+                self.parent.master_volume -
+                config.audio['change_master_volume']
+            )
         if volume != self.parent.master_volume:
-            logger.info('Changed master volume from %.2f to %.2f.', self.parent.master_volume, volume)
+            logger.info(
+                'Changed master volume from %.2f to %.2f.',
+                self.parent.master_volume,
+                volume
+            )
             self.parent.master_volume = volume
             self.parent.output.set_volume(self.parent.master_volume)
+
 
 class DeckLoad(Command):
     """Load a song onto a deck."""
@@ -43,21 +59,26 @@ class DeckLoad(Command):
         self.key_left = 'A'
         self.key_right = ';'
         self.keys = [self.key_left, self.key_right]
-    
+
     def run(self, key):
         """Load a file."""
         if key == self.key_left:
             deck = self.parent.left
         else:
             deck = self.parent.right
-        dlg = wx.FileDialog(self.parent, message = 'Choose a file to load', style = wx.FD_OPEN)
+        dlg = wx.FileDialog(
+            self.parent,
+            message='Choose a file to load',
+            style=wx.FD_OPEN
+        )
         try:
             if dlg.ShowModal() == wx.ID_OK:
                 deck.set_stream(dlg.GetPath())
         except Exception as e:
-            wx.MessageBox(str(e), 'Error', style = wx.ICON_EXCLAMATION)
+            wx.MessageBox(str(e), 'Error', style=wx.ICON_EXCLAMATION)
         finally:
             dlg.Destroy()
+
 
 class PlayPause(Command):
     """Play or pause the deck."""
@@ -65,7 +86,7 @@ class PlayPause(Command):
         self.key_left = 'D'
         self.key_right = 'K'
         self.keys = [self.key_left, self.key_right, 'SPACE']
-    
+
     def run(self, key):
         if key == self.key_left:
             decks = [self.parent.left]
@@ -75,6 +96,7 @@ class PlayPause(Command):
             decks = [self.parent.left, self.parent.right]
         for deck in decks:
             deck.play_pause()
+
 
 class SetPan(Command):
     """Set the pan of each deck."""
@@ -97,10 +119,15 @@ class SetPan(Command):
             self.right_right,
             self.right_full_right
         ]
-    
+
     def run(self, key):
         """Change the pan."""
-        if key in [self.left_left, self.left_full_left, self.left_right, self.left_full_right]:
+        if key in [
+            self.left_left,
+            self.left_full_left,
+            self.left_right,
+            self.left_full_right
+        ]:
             deck = self.parent.left
         else:
             deck = self.parent.right
@@ -115,13 +142,14 @@ class SetPan(Command):
             amount = deck.pan + amount
         deck.set_pan(amount)
 
+
 class DeckReset(Command):
     """Reset a deck."""
     def setup(self):
         self.key_left = 'Q'
         self.key_right = 'P'
         self.keys = [self.key_left, self.key_right]
-    
+
     def run(self, key):
         """Reset the deck."""
         if key == self.key_left:
@@ -130,6 +158,7 @@ class DeckReset(Command):
             deck = self.parent.right
         logger.info('Resetting the %s.', deck)
         deck.reset()
+
 
 class SetVolume(Command):
     """Set the volume of a deck."""
@@ -144,7 +173,7 @@ class SetVolume(Command):
             self.right_up,
             self.right_down
         ]
-    
+
     def run(self, key):
         """Set the volume."""
         if key in [self.left_up, self.left_down]:
@@ -156,13 +185,14 @@ class SetVolume(Command):
             amount = -amount
         deck.set_volume(deck.volume + amount)
 
+
 class FullVolume(Command):
     """Set the deck to full volume."""
     def setup(self):
         self.key_left = 'SHIFT+E'
         self.key_right = 'SHIFT+I'
-        self.keys=[self.key_left, self.key_right]
-    
+        self.keys = [self.key_left, self.key_right]
+
     def run(self, key):
         """Set the deck to rull volume."""
         if key == self.key_left:
@@ -171,13 +201,14 @@ class FullVolume(Command):
             deck = self.parent.right
         deck.set_volume(1.0)
 
+
 class MuteVolume(Command):
     """Mute a deck."""
     def setup(self):
         self.key_left = 'SHIFT+X'
         self.key_right = 'SHIFT+,'
-        self.keys=[self.key_left, self.key_right]
-    
+        self.keys = [self.key_left, self.key_right]
+
     def run(self, key):
         """Set the deck to rull volume."""
         if key == self.key_left:
@@ -185,6 +216,7 @@ class MuteVolume(Command):
         else:
             deck = self.parent.right
         deck.set_volume(0.0)
+
 
 class SetFrequency(Command):
     """Set the frequency of a deck."""
@@ -199,7 +231,7 @@ class SetFrequency(Command):
             self.right_up,
             self.right_down
         ]
-    
+
     def run(self, key):
         if key in [self.left_up, self.left_down]:
             deck = self.parent.left
@@ -209,6 +241,7 @@ class SetFrequency(Command):
         if key in [self.left_down, self.right_down]:
             amount = -amount
         deck.set_frequency(deck.frequency + amount)
+
 
 class DeckSeek(Command):
     """Seek through a deck."""
@@ -228,7 +261,7 @@ class DeckSeek(Command):
             self.right_right
         ]
         self.amount = 1000
-    
+
     def run(self, key):
         """Seek through the track."""
         if key in [self.left_left, self.left_full, self.left_right]:
@@ -243,7 +276,8 @@ class DeckSeek(Command):
             amount = -config.audio['seek_amount']
         else:
             amount = config.audio['seek_amount']
-        deck.seek(amount, absolute = absolute)
+        deck.seek(amount, absolute=absolute)
+
 
 class CrossFade(Command):
     """Crossfade between the two decks."""
@@ -260,7 +294,7 @@ class CrossFade(Command):
             self.key_cut_left,
             self.key_cut_right
         ]
-    
+
     def run(self, key):
         """Crossfade."""
         amount = config.audio['crossfade_amount']
@@ -292,13 +326,14 @@ class CrossFade(Command):
             for deck in [left, right]:
                 deck.set_volume(1.0)
 
+
 class DeckStop(Command):
     """Stop a deck."""
     def setup(self):
         self.key_left = 'SHIFT+D'
         self.key_right = 'SHIFT+K'
         self.keys = [self.key_left, self.key_right]
-    
+
     def run(self, key):
         """Stop the deck."""
         if key == self.key_left:
@@ -306,18 +341,24 @@ class DeckStop(Command):
         else:
             deck = self.parent.right
         deck.pause()
-        deck.seek(0, absolute = True)
+        deck.seek(0, absolute=True)
+
 
 class SetOutput(Command):
     """Set the output device to use."""
     def setup(self):
         self.keys = ['F12']
-    
+
     def run(self, key):
         """Set the output device."""
         output = self.parent.output
         names = output.get_device_names()
-        dlg = wx.SingleChoiceDialog(self.parent, 'Choose a new device for sound output', 'Output Device', names)
+        dlg = wx.SingleChoiceDialog(
+            self.parent,
+            'Choose a new device for sound output',
+            'Output Device',
+            names
+        )
         if dlg.ShowModal() == wx.ID_OK:
             device = dlg.GetSelection()
         else:
@@ -334,14 +375,15 @@ class SetOutput(Command):
             for deck in [self.parent.left, self.parent.right]:
                 if deck.filename:
                     deck.set_stream(deck.filename)
-                    deck.seek(positions[deck], absolute = True)
+                    deck.seek(positions[deck], absolute=True)
+
 
 class Config(Command):
     """View and edit program configuration."""
     def setup(self):
         self.keys = ['CTRL+,']
-    
+
     def run(self, key):
         """Show the configuration."""
-        frame = SimpleConfWxDialog(config.audio, parent = self.parent)
+        frame = SimpleConfWxDialog(config.audio, parent=self.parent)
         frame.Show(True)
