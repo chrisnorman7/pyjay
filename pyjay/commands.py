@@ -337,7 +337,7 @@ class SetOutput(Command):
                     deck.seek(positions[deck], absolute = True)
 
 class Config(Command):
-    """View and edit proram configuration."""
+    """View and edit program configuration."""
     def setup(self):
         self.keys = ['CTRL+,']
     
