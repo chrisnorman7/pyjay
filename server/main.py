@@ -7,6 +7,11 @@ import pages
 
 if __name__ == '__main__':
     parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Enable debug mode'
+    )
+    parser.add_argument(
         '--port',
         type=int,
         default=80,
@@ -24,4 +29,8 @@ if __name__ == '__main__':
         format=args.log_format
     )
     logging.info('Serving pages from %r.', pages)
-    app.run()
+    app.run(
+        port=args.port,
+        host=args.host,
+        debug=args.debug
+    )
