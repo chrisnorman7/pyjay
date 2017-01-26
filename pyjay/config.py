@@ -57,19 +57,6 @@ class Config(Section):
                 max=100
             )
         )
-        google_username = Option(
-            '',
-            title='Google &username'
-        )
-        google_password = Option(
-            '',
-            title='Google &password'
-        )
-        requests = Option(
-            True,
-            title='&Enable requests server',
-            validator=validators.Boolean
-        )
 
 
 config = Config(filename=os.path.join(config_dir, 'config.json'))
