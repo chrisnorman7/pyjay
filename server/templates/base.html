@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Pyjay Request system | {% block title %}Index{% endblock %}</title>
+{% block head %}
+<!-- Head stuff goes here. -->
+{% endblock %}
+</head>
+<body>
+<h2>Menu</h2>
+<p><a href="{{ url_for('index') }}">Home</a> | <a href="{{ url_for('requests') }}">Requests</a></p>
+{% for message in get_flashed_messages() %}
+<p>{{ message }}</p>
+{% endfor %}
+<h1>{% block header %}Welcome{% endblock %}</h1>
+{% block body %}
+<!-- Body stuff goes here. -->
+{% endblock %}
+</body>
+</html>

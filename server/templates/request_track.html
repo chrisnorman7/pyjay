@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Request{% endblock %}
+{% block header %}Request A Track{% endblock %}
+{% block body %}
+<form action = "{{ request.url }}" method = "post">
+{{ form.csrf_token }}
+{% for field in ['name', 'message'] %}
+<p>{{ form[field].label }} {{ form[field] }}</p>
+{% endfor %}
+<p><input type="submit" value="Request"></p>
+</form>
+{% endblock %}

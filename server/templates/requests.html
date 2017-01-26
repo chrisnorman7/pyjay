@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Requests{% endblock %}
+{% block header %}Requests{% endblock %}
+{% block body %}
+{% for request in requests %}
+<h2>{{ request.title }} by {{ request.artist }}</h2>
+<h3>Requested {% if request.requested_by %}by {{ request.requested_by }}{% else %}anonymously{% endif %}</h3>
+{% if request.album_art %}
+<img src="{{ request.album_art }}" alt="Album artwork">
+{% endif %}
+<h3>Message</h3>
+<pre>{{ request.requested_message or 'No message.' }}</pre>
+{% else %}
+<p>The request queue is currently empty.</p>
+{% endfor %}
+{% endblock %}

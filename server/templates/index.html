@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}{% if tracks %}Search Results{% else %}Index{% endif %}{% endblock %}
+{% block body %}
+<h2>Request a track</h2>
+{% if form.errors %}
+<ul>
+{% for list in form.errors.values() %}
+{% for error in list %}
+<li>{{ error }}</li>
+{% endfor %}
+{% endfor %}
+<hr>
+{% endif %}
+<form action = "{{ request.url }}" method = "post">
+{{ form.csrf_token }}
+<p>{{ form.search.label }} {{ form.search }}</p>
+<p><input type = "submit" value = "Search"></p>
+</form>
+{% if tracks %}
+<table>
+<tr>
+<th>Artist</th>
+<th>Album</th>
+<th>Title</th>
+</tr>
+{% for track in tracks %}
+<tr>
+<td>{{ track.artist }}</td>
+<td>{% if track.artwork_url %}<img src="{{ track.artwork_url }}" alt="{% endif %}{{ track.album }}{% if track.artwork_url %}">{% endif %}</td>
+<td><a href="{{ url_for('request_track', id=track.id) }}">{{ track.title }}</a></td>
+</tr>
+{% endfor %}
+</table>
+{% else %}
+<p>Search for tracks to request.</p>
+{% endif %}
+{% endblock %}
