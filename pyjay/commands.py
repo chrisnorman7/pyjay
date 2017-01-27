@@ -48,7 +48,9 @@ class MasterVolume(Command):
     def setup(self):
         self.key_up = '='
         self.key_down = '-'
-        self.keys = [self.key_up, self.key_down]
+        self.key_full = 'SHIFT+='
+        self.key_mute = 'SHIFT+-'
+        self.keys = [self.key_up, self.key_down, self.key_full, self.key_mute]
 
     def run(self, key):
         """Alter the master volume."""
@@ -58,12 +60,16 @@ class MasterVolume(Command):
                 self.parent.master_volume +
                 config.audio['change_master_volume']
             )
-        else:
+        elif key == self.key_down:
             volume = max(
                 0.0,
                 self.parent.master_volume -
                 config.audio['change_master_volume']
             )
+        elif key == self.key_full:
+            volume = 100.0
+        elif key == self.key_mute:
+            volume = 0.0
         if volume != self.parent.master_volume:
             logger.info(
                 'Changed master volume from %.2f to %.2f.',
