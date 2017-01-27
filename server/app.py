@@ -64,6 +64,7 @@ class Track(db.Model):
     requested_by = db.Column(db.String(50), nullable=True)
     requested_message = db.Column(db.String(500), nullable=True)
     google_id = db.Column(db.String(30), unique=True, nullable=False)
+    played = db.Column(db.DateTime, default=None)
 
     def populate(self, data):
         """"Populate from a dictionary."""

@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Recently Played{% endblock %}
+{% block header %}Played Tracks ({{ requests.count() }}){% endblock %}
+{% block body %}
+{% for track in requests %}
+<h2>{{ track.played }}: {{ track.artist }} - {{ track.title }}</h2>
+{% if track.album_art %}<img src="{{ track.album_art }}" alt="Album artwork">{% endif %}
+<h3>Requested by {% if track.requested_by %}{{ track.requested_by }}{% else %}Anonymous{% endif %}</h3>
+<p>{% if track.requested_message %}
+<pre>{{ track.requested_message }}</pre>
+{% else %}
+No message.
+{% endif %}
+</p>
+<hr>
+{% else %}
+<p>No tracks to display.</p>
+{% endfor %}
+{% endblock %}

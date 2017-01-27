@@ -475,6 +475,7 @@ class LoadRequest(Command):
                     )
                 )
             j = response.json()
+            request['played'] = j['track']['played']
             if j['track'] != request:
                 raise RuntimeError(
                     'The requested track differs from the one provided by '
