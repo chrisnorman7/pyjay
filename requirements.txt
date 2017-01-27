@@ -6,3 +6,5 @@ hg+http://hg.q-continuum.net/sound_lib
 git+https://github.com/chrisnorman7/wxgoodies.git#egg=wxgoodies
 git+https://github.com/chrisnorman7/simpleconf.git#egg=simpleconf
 git+https://github.com/chrisnorman7/default_argparse.git#egg=default_argparse
+attrs
+requests

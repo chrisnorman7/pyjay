@@ -2,7 +2,7 @@
 
 import logging
 from default_argparse import parser
-from app import app
+from app import app, config
 import pages
 
 if __name__ == '__main__':
@@ -34,3 +34,4 @@ if __name__ == '__main__':
         host=args.host,
         debug=args.debug
     )
+    config.write()

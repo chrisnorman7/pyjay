@@ -3,19 +3,40 @@
 import logging
 import wx
 from simpleconf.dialogs.wx import SimpleConfWxDialog
+from attr import attrs, attrib, Factory
+from requests import get
 from .config import config
 
 logger = logging.getLogger(__name__)
 
 
-class Command:
-    """All commands must derive from this class."""
+def error(msg, title='Error', style=wx.ICON_EXCLAMATION):
+    """Show an error."""
+    if isinstance(msg, Exception):
+        logger.exception(msg)
+    else:
+        logger.error(msg)
+    return wx.MessageBox(str(msg), title, style=style)
 
-    def __init__(self, parent):
-        """Initialise with the frame that's running the show."""
-        self.parent = parent
-        self.keys = []  # Hotkeys that initialise this command.
+
+@attrs
+class Command:
+    """
+    All commands must derive from this class.
+
+    parent - The frame that is running the show.
+    keys - A list of keys that should trigger this command.
+    """
+
+    parent = attrib()
+    keys = attrib(default=Factory(list))
+
+    def __attrs_post_init__(self):
         self.setup()
+
+    def setup(self):
+        """Override to add extras."""
+        pass
 
     def run(self, key):
         """Actually do something with this command."""
@@ -75,7 +96,7 @@ class DeckLoad(Command):
             if dlg.ShowModal() == wx.ID_OK:
                 deck.set_stream(dlg.GetPath())
         except Exception as e:
-            wx.MessageBox(str(e), 'Error', style=wx.ICON_EXCLAMATION)
+            error(e)
         finally:
             dlg.Destroy()
 
@@ -387,3 +408,81 @@ class Config(Command):
         """Show the configuration."""
         frame = SimpleConfWxDialog(config.audio, parent=self.parent)
         frame.Show(True)
+
+
+class LoadRequest(Command):
+    """Load a request from the requests server."""
+    def setup(self):
+        self.key_left = 'SHIFT+A'
+        self.key_right = 'SHIFT+;'
+        self.keys = [self.key_left, self.key_right]
+
+    def run(self, key):
+        """Load a file."""
+        if key == self.key_left:
+            deck = self.parent.left
+        else:
+            deck = self.parent.right
+        try:
+            response = get(
+                '%s/json' % config.audio['requests_url']
+            )
+            if not response.ok:
+                raise RuntimeError(
+                    'Could not connect to the requests uRL. Please ensure it '
+                    'is correct in your configuration.'
+                )
+            j = response.json()
+            if not j:
+                raise RuntimeError('There are no requests to load.')
+            requests = []
+            for r in j:
+                request = '{0[artist]} - {0[title]}'.format(r)
+                if r['requested_by']:
+                    if r['requested_message']:
+                        text = '. {0[requested_by]}: {0[requested_message]}'
+                        request += text.format(r)
+                    else:
+                        request += ' requested by %s' % r['requested_by']
+                requests.append(request)
+            dlg = wx.SingleChoiceDialog(
+                self.parent,
+                'Choose a request to load',
+                'Requests',
+                requests
+            )
+            if dlg.ShowModal() == wx.ID_OK:
+                request = j[dlg.GetSelection()]
+            else:
+                request = None
+            dlg.Destroy()
+            response = get(
+                '%s/get_url/%d' % (
+                    config.audio['requests_url'],
+                    request['id']
+                ),
+                auth=(
+                    config.audio['requests_username'],
+                    config.audio['requests_password']
+                )
+            )
+            if not response.ok:
+                raise RuntimeError(
+                    'The get_url endpoint returned a {:d} error code '
+                    'for the URL {}.'.format(
+                        response.status_code,
+                        response.url
+                    )
+                )
+            j = response.json()
+            if j['track'] != request:
+                raise RuntimeError(
+                    'The requested track differs from the one provided by '
+                    'get_url.\n\nTrack: %r\nget_url: %r' % (
+                        request,
+                        j['track']
+                    )
+                )
+            deck.set_stream(j['url'], url=True)
+        except Exception as e:
+            error(e)
