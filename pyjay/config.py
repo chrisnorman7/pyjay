@@ -57,18 +57,6 @@ class Config(Section):
                 max=100
             )
         )
-        requests_url = Option(
-            'http://localhost',
-            title='&Requests URL'
-        )
-        requests_username = Option(
-            'admin',
-            title='The &username for getting URLs from the requests system'
-        )
-        requests_password = Option(
-            'password',
-            title='The &password for getting URLs from the requests system'
-        )
         option_order = [
             change_master_volume,
             change_pan,
@@ -76,9 +64,27 @@ class Config(Section):
             change_frequency,
             seek_amount,
             crossfade_amount,
-            requests_url,
-            requests_username,
-            requests_password
+        ]
+
+    class requests(Section):
+        """The requests configuration."""
+        title = 'Requests'
+        url = Option(
+            'http://localhost',
+            title='&Requests URL'
+        )
+        username = Option(
+            'admin',
+            title='The &username for getting URLs from the requests system'
+        )
+        password = Option(
+            'password',
+            title='The &password for getting URLs from the requests system'
+        )
+        option_order = [
+            url,
+            username,
+            password
         ]
 
 

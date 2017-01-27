@@ -412,8 +412,20 @@ class Config(Command):
 
     def run(self, key):
         """Show the configuration."""
-        frame = SimpleConfWxDialog(config.audio, parent=self.parent)
-        frame.Show(True)
+        dlg = wx.SingleChoiceDialog(
+            self.parent,
+            'Choose a configuration page to load',
+            'Configuration',
+            config.sections
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            section = getattr(
+                config,
+                config.sections[dlg.GetSelection()]
+            )
+            frame = SimpleConfWxDialog(section, parent=self.parent)
+            frame.Show(True)
+        dlg.Destroy()
 
 
 class LoadRequest(Command):
@@ -431,7 +443,7 @@ class LoadRequest(Command):
             deck = self.parent.right
         try:
             response = get(
-                '%s/json' % config.audio['requests_url']
+                '%s/json' % config.requests['url']
             )
             if not response.ok:
                 raise RuntimeError(
@@ -464,12 +476,12 @@ class LoadRequest(Command):
             dlg.Destroy()
             response = get(
                 '%s/get_url/%d' % (
-                    config.audio['requests_url'],
+                    config.requests['url'],
                     request['id']
                 ),
                 auth=(
-                    config.audio['requests_username'],
-                    config.audio['requests_password']
+                    config.requests['username'],
+                    config.requests['password']
                 )
             )
             if not response.ok:
