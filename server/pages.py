@@ -1,7 +1,8 @@
 """Web pages."""
 
 from datetime import datetime
-from flask import render_template, flash, redirect, url_for, jsonify, abort
+from flask import (
+    render_template, flash, redirect, url_for, jsonify, abort, request)
 from attr import attrs, attrib, Factory, asdict
 from gmusicapi import CallFailure
 from app import app, get_id, Track, basic_auth
@@ -124,3 +125,24 @@ def played():
             Track.played.isnot(None)
         )
     )
+
+
+@app.route('/delete/<int:id>')
+@basic_auth.required
+def delete(id):
+    """Delete a request."""
+    track = Track.query.filter_by(id=id, played=None)
+    if track.count():
+        track = track.first()
+        track.delete()
+        flash(
+            '{0.artist} - {0.title} was removed from the requests queue.'.
+            format(track)
+        )
+    else:
+        flash('There is no track with that id.')
+    if request.referrer is None:
+        url = url_for('index')
+    else:
+        url = request.referrer
+    return redirect(url)
