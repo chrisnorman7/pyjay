@@ -10,6 +10,22 @@ from .config import config
 logger = logging.getLogger(__name__)
 
 
+def get_id(d):
+    """Get the id from a dictionary d."""
+    return d.get(
+        'storeId',
+        d.get(
+            'nid',
+            d.get(
+                'trackId',
+                d.get(
+                    'id'
+                )
+            )
+        )
+    )
+
+
 def error(msg, title='Error', style=wx.ICON_EXCLAMATION):
     """Show an error."""
     if isinstance(msg, Exception):
@@ -505,3 +521,51 @@ class LoadRequest(Command):
             deck.set_stream(j['url'], url=True)
         except Exception as e:
             error(e)
+
+
+class GoogleSearch(Command):
+    """Load a track from Google Play."""
+
+    def setup(self):
+        self.key_left = 'CTRL+A'
+        self.key_right = 'CTRL+;'
+        self.keys = [self.key_left, self.key_right]
+
+    def run(self, key):
+        """Run the command."""
+        if not self.parent.google_authenticated:
+            self.parent.google_authenticated = self.parent.google_api.login(
+                config.google['username'],
+                config.google['password'],
+                self.parent.google_api.FROM_MAC_ADDRESS
+            )
+        if not self.parent.google_authenticated:
+            return error('Login failed.')
+        search = wx.GetTextFromUser('Search', caption='Google Search')
+        results = self.parent.google_api.search(search)['song_hits']
+        if not results:
+            return error('No search results.')
+        results = [x['track'] for x in results]
+        dlg = wx.SingleChoiceDialog(
+            self.parent,
+            'Select a track',
+            'Search Results',
+            [
+                '{0[artist]} - {0[title]}'.format(
+                    result
+                ) for result in results
+            ]
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            track = results[dlg.GetSelection()]
+        else:
+            track = None
+        dlg.Destroy()
+        if track is not None:
+            id = get_id(track)
+            url = self.parent.google_api.get_stream_url(id)
+            if key == self.key_left:
+                deck = self.parent.left
+            else:
+                deck = self.parent.right
+            deck.set_stream(url, url=True)

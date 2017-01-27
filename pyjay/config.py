@@ -71,18 +71,34 @@ class Config(Section):
         title = 'Requests'
         url = Option(
             'http://localhost',
-            title='&Requests URL'
+            title='&URL'
         )
         username = Option(
             'admin',
-            title='The &username for getting URLs from the requests system'
+            title='&username'
         )
         password = Option(
             'password',
-            title='The &password for getting URLs from the requests system'
+            title='&Password'
         )
         option_order = [
             url,
+            username,
+            password
+        ]
+
+    class google(Section):
+        """Google configuration."""
+        title = 'Google'
+        username = Option(
+            '',
+            title='&Email'
+        )
+        password = Option(
+            '',
+            title='&Password'
+        )
+        option_order = [
             username,
             password
         ]

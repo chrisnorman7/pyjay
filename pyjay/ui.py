@@ -3,6 +3,7 @@
 import logging
 import wx
 from inspect import isclass
+from gmusicapi import Mobileclient
 from sound_lib.output import Output
 from wxgoodies.keys import key_to_str
 from . import commands
@@ -55,6 +56,8 @@ class MainFrame(wx.Frame):
         self.crossfader = 0
         self.output = Output()
         self.text.Bind(wx.EVT_KEY_DOWN, self.on_keydown)
+        self.google_authenticated = False
+        self.google_api = Mobileclient()
 
     def on_keydown(self, event):
         """Key was pressed."""
