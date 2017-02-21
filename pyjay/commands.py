@@ -569,3 +569,18 @@ class GoogleSearch(Command):
             else:
                 deck = self.parent.right
             deck.set_stream(url, url=True)
+
+
+class Microphone(Command):
+    """Toggle the microphone."""
+
+    def setup(self):
+        self.playing = False
+        self.keys = ['/']
+
+    def run(self, key):
+        if self.playing:
+            self.parent.microphone_stream.pause()
+        else:
+            self.parent.microphone_stream.play()
+        self.playing = not self.playing
