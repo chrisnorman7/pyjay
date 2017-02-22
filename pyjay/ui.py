@@ -72,8 +72,8 @@ class MainFrame(wx.Frame):
             proc=self.microphone_push
         )
         self.microphone_stream = PushStream(chans=1)
-        self.microphone_stream.volume = 0.0
         self.microphone_recording.play()
+        self.microphone_stream.volume = 0.0
         self.microphone_stream.play()
 
     def microphone_push(self, handle, buffer, length, user):

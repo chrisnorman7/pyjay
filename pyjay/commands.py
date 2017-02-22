@@ -152,6 +152,10 @@ class SetPan(Command):
         self.right_full_left = 'SHIFT+J'
         self.right_right = 'L'
         self.right_full_right = 'SHIFT+L'
+        self.microphone_left = '['
+        self.microphone_full_left = 'SHIFT+['
+        self.microphone_right = ']'
+        self.microphone_full_right = 'SHIFT+]'
         self.keys = [
             self.left_left,
             self.left_full_left,
@@ -160,7 +164,7 @@ class SetPan(Command):
             self.right_left,
             self.right_full_left,
             self.right_right,
-            self.right_full_right
+            self.right_full_right,
         ]
 
     def run(self, key):
@@ -604,3 +608,46 @@ class Microphone(Command):
         else:
             logger.info('Microphone unmuted.')
             self.parent.microphone_stream.volume = 1.0
+
+
+class MicrophonePan(Command):
+    """Change the microphne pan."""
+
+    def setup(self):
+        self.left = '['
+        self.full_left = 'SHIFT+['
+        self.right = ']'
+        self.full_right = 'SHIFT+]'
+        self.keys = [
+            self.left,
+            self.full_left,
+            self.right,
+            self.full_right
+        ]
+
+    def run(self, key):
+        amount = config.audio['change_pan']
+        if key == self.left:
+            amount = -amount
+        amount = self.parent.microphone_stream.pan + amount
+        if key == self.full_left:
+            amount = -1.0
+        elif key == self.full_right:
+            amount = 1.0
+        if amount < -1.0:
+            amount = -1.0
+        elif amount > 1.0:
+            amount = 1.0
+        logger.info('Setting microphone pan to %f.', amount)
+        self.parent.microphone_stream.set_pan(amount)
+
+
+class ResetMicrophone(Command):
+    """Reset the microphone settings."""
+
+    def setup(self):
+        self.keys = ['RETURN']
+
+    def run(self, key):
+        logger.info('Resetting the microphone.')
+        self.parent.microphone_stream.pan = 0.0
