@@ -392,7 +392,7 @@ class DeckStop(Command):
 
 
 class SetOutput(Command):
-    """Set the output device to use."""
+    """Change audio devices."""
     def setup(self):
         self.input_key = 'F11'
         self.output_key = 'F12'
