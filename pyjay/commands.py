@@ -390,35 +390,55 @@ class DeckStop(Command):
 class SetOutput(Command):
     """Set the output device to use."""
     def setup(self):
-        self.keys = ['F12']
+        self.input_key = 'F11'
+        self.output_key = 'F12'
+        self.keys = [self.input_key, self.output_key]
 
     def run(self, key):
         """Set the output device."""
-        output = self.parent.output
-        names = output.get_device_names()
+        if key == self.input_key:
+            attr = 'input'
+        else:
+            attr = 'output'
+        device = getattr(self.parent, attr)
+        names = device.get_device_names()
         dlg = wx.SingleChoiceDialog(
             self.parent,
-            'Choose a new device for sound output',
-            'Output Device',
+            'Choose a new %s device' % attr,
+            '%s Device' % attr.title(),
             names
         )
         if dlg.ShowModal() == wx.ID_OK:
-            device = dlg.GetSelection()
+            new_device = dlg.GetSelection()
         else:
-            device = None
+            new_device = None
         dlg.Destroy()
-        if device is not None:
-            positions = {}
-            for deck in [self.parent.left, self.parent.right]:
-                positions[deck] = deck.get_position()
-            output.free()
-            output = output.__class__()
-            self.parent.output = output
-            output.set_device(device + 1)
-            for deck in [self.parent.left, self.parent.right]:
-                if deck.filename:
-                    deck.set_stream(deck.filename)
-                    deck.seek(positions[deck], absolute=True)
+        if new_device is not None:
+            if attr == 'input':
+                positions = {}
+                for deck in [self.parent.left, self.parent.right]:
+                    positions[deck] = deck.get_position()
+            device.free()
+            device = device.__class__()
+            setattr(self.parent, attr, device)
+            if attr == 'output':
+                new_device += 1
+            else:
+                new_device -= 1
+            device.set_device(new_device)
+            if attr == 'output':
+                for deck in [self.parent.left, self.parent.right]:
+                    if deck.filename:
+                        if deck.url is False:
+                            deck.set_stream(deck.filename)
+                            deck.seek(positions[deck], absolute=True)
+            else:
+                self.parent.setup_microphone()
+            logger.info(
+                'Set %s to %s.',
+                attr,
+                device.get_device_names()[device.device - 1]
+            )
 
 
 class Config(Command):
@@ -575,12 +595,12 @@ class Microphone(Command):
     """Toggle the microphone."""
 
     def setup(self):
-        self.playing = False
         self.keys = ['/']
 
     def run(self, key):
-        if self.playing:
-            self.parent.microphone_stream.pause()
+        if self.parent.microphone_stream.volume:
+            logger.info('Microphone muted.')
+            self.parent.microphone_stream.volume = 0.0
         else:
-            self.parent.microphone_stream.play()
-        self.playing = not self.playing
+            logger.info('Microphone unmuted.')
+            self.parent.microphone_stream.volume = 1.0

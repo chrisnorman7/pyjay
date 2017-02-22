@@ -2,12 +2,13 @@
 
 import logging
 import wx
-from threading import Thread
+from ctypes import string_at
 from inspect import isclass
 from gmusicapi import Mobileclient
+from sound_lib.input import Input
 from sound_lib.output import Output
 from sound_lib.stream import PushStream
-from pyaudio import PyAudio, paInt16 as microphone_format
+from sound_lib.recording import Recording
 from wxgoodies.keys import key_to_str
 from . import commands
 from .deck import Deck
@@ -57,32 +58,29 @@ class MainFrame(wx.Frame):
         self.right = Deck('Right Deck')
         self.master_volume = 100.0
         self.crossfader = 0
+        self.input = Input()
         self.output = Output()
         self.text.Bind(wx.EVT_KEY_DOWN, self.on_keydown)
         self.google_authenticated = False
         self.google_api = Mobileclient()
-        self.microphone_audio = PyAudio().open(
-            44100,
-            1,
-            microphone_format,
-            input=True,
-            output=False
+        self.setup_microphone()
+
+    def setup_microphone(self):
+        """Setup the microphone."""
+        self.microphone_recording = Recording(
+            channels=1,
+            proc=self.microphone_push
         )
         self.microphone_stream = PushStream(chans=1)
-        self.microphone_thread = Thread(target=self.microphone_push)
-        self.Bind(wx.EVT_CLOSE, self.on_close)
-        self.microphone_recording = True
-        self.microphone_thread.start()
+        self.microphone_stream.volume = 0.0
+        self.microphone_recording.play()
+        self.microphone_stream.play()
 
-    def microphone_push(self):
+    def microphone_push(self, handle, buffer, length, user):
         """Push audio from the microphone to the stream."""
-        logger.info('Starting microphone.')
-        while self.microphone_recording:
-            self.microphone_stream.push(
-                self.microphone_audio.read(1024)
-            )
-        logger.info('Microphone closed.')
-        self.microphone_stream.stop()
+        buf = string_at(buffer, length)
+        self.microphone_stream.push(buf)
+        return True
 
     def on_close(self, event):
         """About to close, stop the microphone."""

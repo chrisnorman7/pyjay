@@ -10,7 +10,9 @@ class Deck:
     """An instance of a deck."""
     def __init__(self, name):
         """Initialise the deck."""
+        self.url = False
         self.name = name
+        self.filename = None
         self.log_attribute('name')
         self.stream = None
         self.reset()
@@ -48,6 +50,7 @@ class Deck:
     def set_stream(self, filename, url=False):
         """Load a stream from the provided filename. If url is True, load a
         URL."""
+        self.url = url
         if url:
             self.stream = URLStream(
                 url=filename.encode()
