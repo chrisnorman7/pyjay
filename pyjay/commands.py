@@ -580,7 +580,8 @@ class GoogleSearch(Command):
             'Select a track',
             'Search Results',
             [
-                '{0[artist]} - {0[title]}'.format(
+                '{0[artist]} - {0[album]} - {0[trackNumber]} - '
+                '{0[title]}'.format(
                     result
                 ) for result in results
             ]
