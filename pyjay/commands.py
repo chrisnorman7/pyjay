@@ -5,6 +5,7 @@ import wx
 from simpleconf.dialogs.wx import SimpleConfWxDialog
 from attr import attrs, attrib, Factory
 from requests import get
+from sound_lib.main import BassError
 from .config import config
 
 logger = logging.getLogger(__name__)
@@ -387,8 +388,12 @@ class DeckStop(Command):
             deck = self.parent.left
         else:
             deck = self.parent.right
-        deck.pause()
-        deck.seek(0, absolute=True)
+        try:
+            deck.pause()
+        except BassError:
+            pass
+        finally:
+            deck.seek(0, absolute=True)
 
 
 class SetOutput(Command):
