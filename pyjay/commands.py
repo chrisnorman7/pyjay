@@ -617,7 +617,7 @@ class Microphone(Command):
 
 
 class MicrophonePan(Command):
-    """Change the microphne pan."""
+    """Change the microphone pan."""
 
     def setup(self):
         self.left = '['
