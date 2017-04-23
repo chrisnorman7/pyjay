@@ -11,6 +11,7 @@ from requests import get
 from jinja2 import Environment
 from sound_lib.main import BassError
 from . import application
+from .accessibility import speech
 from .config import config
 
 logger = logging.getLogger(__name__)
@@ -682,8 +683,14 @@ class ResetMicrophone(Command):
 
 
 class Help(Command):
+    """Show help in your web browser or enable help mode."""
     def setup(self):
-        self.keys = ['F1']
+        self.help_html_key = 'F1'
+        self.parent.help_mode_key = 'SHIFT+/'
+        self.keys = [
+            self.help_html_key,
+            self.parent.help_mode_key
+        ]
         self.environment = Environment()
         self.environment.globals.update(
             app_name=application.name,
@@ -692,10 +699,79 @@ class Help(Command):
 
     def run(self, key):
         """Generate HTML."""
-        html = self.environment.from_string(html_help).render()
-        if not os.path.isdir(application.config_dir):
-            os.makedirs(application.config_dir)
-        path = os.path.join(application.config_dir, 'hotkeys.html')
-        with open(path, 'w') as f:
-            f.write(html)
-        webbrowser.open(path)
+        if key == self.help_html_key:
+            html = self.environment.from_string(html_help).render()
+            if not os.path.isdir(application.config_dir):
+                os.makedirs(application.config_dir)
+            path = os.path.join(application.config_dir, 'hotkeys.html')
+            with open(path, 'w') as f:
+                f.write(html)
+            webbrowser.open(path)
+        else:
+            self.parent.help_mode = not self.parent.help_mode
+            speech.speak(
+                'Help mode %s.' %
+                ('enabled' if self.parent.help_mode else 'disabled')
+            )
+
+
+class SpeakProgress(Command):
+    """Speak the position of a deck."""
+    def setup(self):
+        self.left = 'SHIFT+R'
+        self.right = 'SHIFT+O'
+        self.keys = [
+            self.left,
+            self.right
+        ]
+
+    def run(self, key):
+        if key == self.left:
+            deck = self.parent.left
+        else:
+            deck = self.parent.right
+        s = deck.stream
+        if s is None:
+            speech.speak('Nothing playing.')
+        else:
+            speech.speak(
+                '%.2f%%' % (
+                    s.get_position() * (100 / s.get_length())
+                )
+            )
+
+
+class ResetFrequency(Command):
+    """Reset the frequency of a deck."""
+    def setup(self):
+        self.key_left = 'SHIFT+Q'
+        self.key_right = 'SHIFT+Y'
+        self.keys = [
+            self.key_left,
+            self.key_right
+        ]
+
+    def run(self, key):
+        if key == self.key_left:
+            deck = self.parent.left
+        else:
+            deck = self.parent.right
+        deck.set_frequency(44100.0)
+
+
+class ResetPan(Command):
+    """Reset the pan of a deck."""
+    def setup(self):
+        self.key_left = 'SHIFT+T'
+        self.key_right = 'SHIFT+P'
+        self.keys = [
+            self.key_left,
+            self.key_right
+        ]
+
+    def run(self, key):
+        if key == self.key_left:
+            deck = self.parent.left
+        else:
+            deck = self.parent.right
+        deck.set_pan(0.0)

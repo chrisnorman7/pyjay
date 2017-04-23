@@ -10,6 +10,7 @@ from sound_lib.output import Output
 from sound_lib.stream import PushStream
 from sound_lib.recording import Recording
 from wxgoodies.keys import key_to_str
+from .accessibility import speech
 from . import commands
 from .deck import Deck
 
@@ -20,6 +21,7 @@ class MainFrame(wx.Frame):
     """The main frame."""
     def __init__(self, *args, **kwargs):
         """Initialise the window."""
+        self.help_mode = False
         super(MainFrame, self).__init__(*args, **kwargs)
         p = wx.Panel(self)
         s = wx.BoxSizer(wx.VERTICAL)
@@ -95,7 +97,11 @@ class MainFrame(wx.Frame):
         key = key_to_str(event.GetModifiers(), event.GetKeyCode())
         if key in self.hotkeys:
             cmd = self.hotkeys[key]
-            logger.info('Running command %r.', cmd)
-            cmd.run(key)
+            if self.help_mode:
+                logger.info('Showing help on %r.', cmd)
+                speech.speak(cmd.__doc__ or 'No description available.')
+            if key == self.help_mode_key or not self.help_mode:
+                logger.info('Running %r.', cmd)
+                cmd.run(key)
         else:
             event.Skip()
