@@ -1,14 +1,36 @@
 """All commands for the PyJay Application."""
 
 import logging
+import os
+import os.path
+import webbrowser
 import wx
 from simpleconf.dialogs.wx import SimpleConfWxDialog
 from attr import attrs, attrib, Factory
 from requests import get
+from jinja2 import Environment
 from sound_lib.main import BassError
+from . import application
 from .config import config
 
 logger = logging.getLogger(__name__)
+
+html_help = """
+<html>
+<head>
+<title>{{ app_name }} Key Commands</title>
+</head>
+<body>
+<h1>Hotkeys for the {{ app_name }} program.</h1>
+<dl>
+{% for cmd in frame.commands %}
+<dt>{{ cmd.__doc__ or 'No description available' }}</dt>
+<dd>{{ cmd.keys|join(', ') }}.</dd>
+{% endfor %}
+</dl>
+</body>
+</html>
+"""
 
 
 def get_id(d):
@@ -657,3 +679,23 @@ class ResetMicrophone(Command):
     def run(self, key):
         logger.info('Resetting the microphone.')
         self.parent.microphone_stream.pan = 0.0
+
+
+class Help(Command):
+    def setup(self):
+        self.keys = ['F1']
+        self.environment = Environment()
+        self.environment.globals.update(
+            app_name=application.name,
+            frame=self.parent
+        )
+
+    def run(self, key):
+        """Generate HTML."""
+        html = self.environment.from_string(html_help).render()
+        if not os.path.isdir(application.config_dir):
+            os.makedirs(application.config_dir)
+        path = os.path.join(application.config_dir, 'hotkeys.html')
+        with open(path, 'w') as f:
+            f.write(html)
+        webbrowser.open(path)

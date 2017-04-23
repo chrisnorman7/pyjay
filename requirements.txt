@@ -9,3 +9,4 @@ git+https://github.com/chrisnorman7/default_argparse.git#egg=default_argparse
 attrs
 requests
 gmusicapi
+jinja2
