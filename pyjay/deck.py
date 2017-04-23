@@ -1,22 +1,24 @@
 """Provides the Deck class."""
 
 import logging
+from attr import attrs, attrib, Factory
 from sound_lib.stream import FileStream, URLStream
 
 logger = logging.getLogger(__name__)
 
 
+@attrs
 class Deck:
     """An instance of a deck."""
-    def __init__(self, name):
-        """Initialise the deck."""
-        self.url = False
-        self.name = name
-        self.filename = None
+    name = attrib()
+    filename = attrib(default=Factory(lambda: None))
+    url = attrib(default=Factory(lambda: False))
+    stream = attrib(default=Factory(lambda: None))
+    paused = attrib(default=Factory(lambda: True))
+
+    def __attrs_post_init__(self):
         self.log_attribute('name')
-        self.stream = None
         self.reset()
-        self.paused = True
 
     def reset(self):
         """Reset the deck to defaults."""
