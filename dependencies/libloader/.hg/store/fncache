@@ -1,0 +1,4 @@
+data/libloader/libloader.py.i
+data/libloader/com.py.i
+data/libloader/__init__.py.i
+data/setup.py.i
