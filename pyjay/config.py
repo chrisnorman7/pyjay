@@ -1,6 +1,6 @@
 """Configuration."""
 
-from simpleconf import Section, Option, validators
+from simpleconf2 import Section, Option, validators
 from .application import config_dir
 import os.path
 
@@ -98,10 +98,8 @@ class Config(Section):
             '',
             title='&Password'
         )
-        option_order = [
-            username,
-            password
-        ]
+        android_id = Option('', title='Android &ID')
+        option_order = [username, password, android_id]
 
 
 config = Config(filename=os.path.join(config_dir, 'config.json'))

@@ -5,7 +5,7 @@ import os
 import os.path
 import webbrowser
 import wx
-from simpleconf.dialogs.wx import SimpleConfWxDialog
+from simpleconf2.dialogs.wx import SimpleConfWxDialog
 from attr import attrs, attrib, Factory
 from requests import get
 from jinja2 import Environment
@@ -585,16 +585,13 @@ class GoogleSearch(Command):
 
     def run(self, key):
         """Run the command."""
-        if not self.parent.google_authenticated:
-            self.parent.google_authenticated = self.parent.google_api.login(
-                config.google['username'],
-                config.google['password'],
-                self.parent.google_api.FROM_MAC_ADDRESS
-            )
-        if not self.parent.google_authenticated:
-            return error('Login failed.')
+        api = self.parent.google_api
+        try:
+            self.parent.google_login()
+        except Exception as e:
+            return error(e)
         search = wx.GetTextFromUser('Search', caption='Google Search')
-        results = self.parent.google_api.search(search)['song_hits']
+        results = api.search(search)['song_hits']
         if not results:
             return error('No search results.')
         results = [x['track'] for x in results]
@@ -616,7 +613,10 @@ class GoogleSearch(Command):
         dlg.Destroy()
         if track is not None:
             id = get_id(track)
-            url = self.parent.google_api.get_stream_url(id)
+            try:
+                url = api.get_stream_url(id)
+            except Exception as e:
+                return error(e)
             if key == self.key_left:
                 deck = self.parent.left
             else:
@@ -775,3 +775,36 @@ class ResetPan(Command):
         else:
             deck = self.parent.right
         deck.set_pan(0.0)
+
+
+class RegisteredDevices(Command):
+    """Allows you to set the ID of the device you use to sign into Google.."""
+
+    def setup(self):
+        self.keys = ['F8']
+
+    def run(self, key):
+        api = self.parent.google_api
+        try:
+            self.parent.google_login()
+        except Exception as e:
+            return error(e)
+        devices = api.get_registered_devices()
+        with wx.SingleChoiceDialog(
+            self.parent, 'Select a device name to login with its ID',
+            'Registered Devices',
+            [d.get('friendlyName', 'Unnamed') for d in devices]
+        ) as dlg:
+            res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            index = dlg.GetSelection()
+            device = devices[index]
+            id = device['id']
+            if id.startswith('0x'):
+                id = id[2:]
+            config.google['android_id'] = id
+            self.parent.google_reset()
+            try:
+                self.parent.google_login()
+            except Exception as e:
+                error(e)

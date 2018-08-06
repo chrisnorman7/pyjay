@@ -12,6 +12,7 @@ from sound_lib.recording import Recording
 from wxgoodies.keys import key_to_str
 from .accessibility import speech
 from . import commands
+from .config import config
 from .deck import Deck
 
 logger = logging.getLogger(__name__)
@@ -63,9 +64,26 @@ class MainFrame(wx.Frame):
         self.input = Input()
         self.output = Output()
         self.text.Bind(wx.EVT_KEY_DOWN, self.on_keydown)
-        self.google_authenticated = False
-        self.google_api = Mobileclient()
         self.setup_microphone()
+        self.google_reset()
+
+    def google_reset(self):
+        """Reset Google to the default un-logged in state."""
+        self.google_authenticated = False
+        self.google_api = Mobileclient(debug_logging=False)
+
+    def google_login(self):
+        """Logs into Google. If login fails or anything else happens, an
+        exception is raised."""
+        api = self.google_api
+        if not self.google_authenticated:
+            android_id = config.google['android_id'] or api.FROM_MAC_ADDRESS
+            self.google_authenticated = api.login(
+                config.google['username'], config.google['password'],
+                android_id
+            )
+        if not self.google_authenticated:
+            raise RuntimeError('Login failed.')
 
     def setup_microphone(self):
         """Setup the microphone."""

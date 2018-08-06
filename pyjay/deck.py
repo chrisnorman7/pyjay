@@ -55,7 +55,7 @@ class Deck:
         self.url = url
         if url:
             self.stream = URLStream(
-                url=filename.encode()
+                url=filename
             )
         else:
             self.stream = FileStream(
