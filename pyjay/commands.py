@@ -783,3 +783,19 @@ class OpenFile(Command):
             error('Nothing loaded.')
         else:
             webbrowser.open(filename)
+
+
+class SpeakPlayState(Command):
+    """Speak the play state of a deck."""
+
+    def setup(self):
+        self.key_left = 'SHIFT+Z'
+        self.key_right = 'SHIFT+M'
+        self.keys = [self.key_left, self.key_right]
+
+    def run(self, key):
+        if key == self.key_left:
+            deck = self.parent.left
+        else:
+            deck = self.parent.right
+        speech.speak('Paused.' if deck.paused else 'Not paused.')
