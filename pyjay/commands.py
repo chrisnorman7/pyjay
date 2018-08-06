@@ -229,6 +229,7 @@ class DeckReset(Command):
             deck = self.parent.right
         logger.info('Resetting the %s.', deck)
         deck.reset()
+        speech.speak('%s reck reset.' % str(deck).title())
 
 
 class SetVolume(Command):
@@ -809,3 +810,23 @@ class RegisteredDevices(Command):
                 self.parent.google_login()
             except Exception as e:
                 error(e)
+
+
+class OpenFile(Command):
+    """Open the file loaded to a deck externally."""
+
+    def setup(self):
+        self.key_left = 'SHIFT+C'
+        self.key_right = 'SHIFT+.'
+        self.keys = [self.key_left, self.key_right]
+
+    def run(self, key):
+        if key == self.key_left:
+            deck = self.parent.left
+        else:
+            deck = self.parent.right
+        filename = deck.filename
+        if filename is None:
+            error('Nothing loaded.')
+        else:
+            webbrowser.open(filename)
