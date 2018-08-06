@@ -7,7 +7,7 @@ import webbrowser
 import wx
 from simpleconf2.dialogs.wx import SimpleConfWxDialog
 from attr import attrs, attrib, Factory
-from requests import get
+from requests import Session
 from jinja2 import Environment
 from sound_lib.main import BassError
 from . import application
@@ -15,6 +15,8 @@ from .accessibility import speech
 from .config import config
 
 logger = logging.getLogger(__name__)
+
+http = Session()
 
 html_help = """
 <html>
@@ -36,27 +38,17 @@ html_help = """
 
 def get_id(d):
     """Get the id from a dictionary d."""
-    return d.get(
-        'storeId',
-        d.get(
-            'nid',
-            d.get(
-                'trackId',
-                d.get(
-                    'id'
-                )
-            )
-        )
-    )
+    return d.get('storeId', d.get('nid', d.get('trackId', d.get('id'))))
 
 
 def error(msg, title='Error', style=wx.ICON_EXCLAMATION):
     """Show an error."""
     if isinstance(msg, Exception):
         logger.exception(msg)
+        msg = str(msg)
     else:
         logger.error(msg)
-    return wx.MessageBox(str(msg), title, style=style)
+    return wx.MessageBox(msg, title, style=style)
 
 
 @attrs
@@ -76,15 +68,16 @@ class Command:
 
     def setup(self):
         """Override to add extras."""
-        pass
+        raise NotImplementedError()
 
     def run(self, key):
         """Actually do something with this command."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class MasterVolume(Command):
     """Alter the master volume."""
+
     def setup(self):
         self.key_up = '='
         self.key_down = '-'
@@ -96,14 +89,12 @@ class MasterVolume(Command):
         """Alter the master volume."""
         if key == self.key_up:
             volume = min(
-                100.0,
-                self.parent.master_volume +
+                100.0, self.parent.master_volume +
                 config.audio['change_master_volume']
             )
         elif key == self.key_down:
             volume = max(
-                0.0,
-                self.parent.master_volume -
+                0.0, self.parent.master_volume -
                 config.audio['change_master_volume']
             )
         elif key == self.key_full:
@@ -116,12 +107,14 @@ class MasterVolume(Command):
                 self.parent.master_volume,
                 volume
             )
+            speech.speak('Master volume %.2f.' % volume)
             self.parent.master_volume = volume
             self.parent.output.set_volume(self.parent.master_volume)
 
 
 class DeckLoad(Command):
     """Load a song onto a deck."""
+
     def setup(self):
         self.key_left = 'A'
         self.key_right = ';'
@@ -134,9 +127,7 @@ class DeckLoad(Command):
         else:
             deck = self.parent.right
         dlg = wx.FileDialog(
-            self.parent,
-            message='Choose a file to load',
-            style=wx.FD_OPEN
+            self.parent, message='Choose a file to load', style=wx.FD_OPEN
         )
         try:
             if dlg.ShowModal() == wx.ID_OK:
@@ -149,6 +140,7 @@ class DeckLoad(Command):
 
 class PlayPause(Command):
     """Play or pause the deck."""
+
     def setup(self):
         self.key_left = 'D'
         self.key_right = 'K'
@@ -163,10 +155,14 @@ class PlayPause(Command):
             decks = [self.parent.left, self.parent.right]
         for deck in decks:
             deck.play_pause()
+            speech.speak(
+                '%s %s deck.' % ('Pause' if deck.paused else 'Play', deck)
+            )
 
 
 class SetPan(Command):
     """Set the pan of each deck."""
+
     def setup(self):
         self.left_left = 'S'
         self.left_full_left = 'SHIFT+S'
@@ -181,22 +177,15 @@ class SetPan(Command):
         self.microphone_right = ']'
         self.microphone_full_right = 'SHIFT+]'
         self.keys = [
-            self.left_left,
-            self.left_full_left,
-            self.left_right,
-            self.left_full_right,
-            self.right_left,
-            self.right_full_left,
-            self.right_right,
-            self.right_full_right,
+            self.left_left, self.left_full_left, self.left_right,
+            self.left_full_right, self.right_left, self.right_full_left,
+            self.right_right, self.right_full_right
         ]
 
     def run(self, key):
         """Change the pan."""
         if key in [
-            self.left_left,
-            self.left_full_left,
-            self.left_right,
+            self.left_left, self.left_full_left, self.left_right,
             self.left_full_right
         ]:
             deck = self.parent.left
@@ -212,10 +201,12 @@ class SetPan(Command):
         else:
             amount = deck.pan + amount
         deck.set_pan(amount)
+        speech.speak('Pan %.1f.' % deck.pan)
 
 
 class DeckReset(Command):
     """Reset a deck."""
+
     def setup(self):
         self.key_left = 'Q'
         self.key_right = 'P'
@@ -229,21 +220,19 @@ class DeckReset(Command):
             deck = self.parent.right
         logger.info('Resetting the %s.', deck)
         deck.reset()
-        speech.speak('%s reck reset.' % str(deck).title())
+        speech.speak('Reset %s.' % deck)
 
 
 class SetVolume(Command):
     """Set the volume of a deck."""
+
     def setup(self):
         self.left_up = 'E'
         self.left_down = 'X'
         self.right_up = 'I'
         self.right_down = ','
         self.keys = [
-            self.left_up,
-            self.left_down,
-            self.right_up,
-            self.right_down
+            self.left_up, self.left_down, self.right_up, self.right_down
         ]
 
     def run(self, key):
@@ -255,27 +244,32 @@ class SetVolume(Command):
         amount = config.audio['change_volume']
         if key in [self.left_down, self.right_down]:
             amount = -amount
-        deck.set_volume(deck.volume + amount)
+        amount += deck.volume
+        deck.set_volume(amount)
+        speech.speak('Volume %.1f.' % deck.volume)
 
 
 class FullVolume(Command):
     """Set the deck to full volume."""
+
     def setup(self):
         self.key_left = 'SHIFT+E'
         self.key_right = 'SHIFT+I'
         self.keys = [self.key_left, self.key_right]
 
     def run(self, key):
-        """Set the deck to rull volume."""
+        """Set the deck to full volume."""
         if key == self.key_left:
             deck = self.parent.left
         else:
             deck = self.parent.right
         deck.set_volume(1.0)
+        speech.speak('Volume full.')
 
 
 class MuteVolume(Command):
     """Mute a deck."""
+
     def setup(self):
         self.key_left = 'SHIFT+X'
         self.key_right = 'SHIFT+,'
@@ -288,20 +282,19 @@ class MuteVolume(Command):
         else:
             deck = self.parent.right
         deck.set_volume(0.0)
+        speech.speak('Volume mute.')
 
 
 class SetFrequency(Command):
     """Set the frequency of a deck."""
+
     def setup(self):
         self.left_up = 'C'
         self.left_down = 'Z'
         self.right_up = '.'
         self.right_down = 'M'
         self.keys = [
-            self.left_up,
-            self.left_down,
-            self.right_up,
-            self.right_down
+            self.left_up, self.left_down, self.right_up, self.right_down
         ]
 
     def run(self, key):
@@ -314,10 +307,12 @@ class SetFrequency(Command):
             amount = -amount
         amount += deck.frequency
         deck.set_frequency(amount)
+        speech.speak('Frequency %.d.' % deck.frequency)
 
 
 class DeckSeek(Command):
     """Seek through a deck."""
+
     def setup(self):
         self.left_left = 'W'
         self.left_full = 'SHIFT+W'
@@ -326,14 +321,9 @@ class DeckSeek(Command):
         self.right_full = 'SHIFT+U'
         self.right_right = 'O'
         self.keys = [
-            self.left_left,
-            self.left_full,
-            self.left_right,
-            self.right_left,
-            self.right_full,
-            self.right_right
+            self.left_left, self.left_full, self.left_right, self.right_left,
+            self.right_full, self.right_right
         ]
-        self.amount = 1000
 
     def run(self, key):
         """Seek through the track."""
@@ -354,6 +344,7 @@ class DeckSeek(Command):
 
 class CrossFade(Command):
     """Crossfade between the two decks."""
+
     def setup(self):
         self.key_left = 'G'
         self.key_right = 'H'
@@ -361,10 +352,7 @@ class CrossFade(Command):
         self.key_cut_left = 'SHIFT+G'
         self.key_cut_right = 'SHIFT+H'
         self.keys = [
-            self.key_left,
-            self.key_right,
-            self.key_centre,
-            self.key_cut_left,
+            self.key_left, self.key_right, self.key_centre, self.key_cut_left,
             self.key_cut_right
         ]
 
@@ -402,6 +390,7 @@ class CrossFade(Command):
 
 class DeckStop(Command):
     """Stop a deck."""
+
     def setup(self):
         self.key_left = 'SHIFT+D'
         self.key_right = 'SHIFT+K'
@@ -419,10 +408,12 @@ class DeckStop(Command):
             pass
         finally:
             deck.seek(0, absolute=True)
+            speech.speak('Stopped %s deck.' % deck)
 
 
 class SetOutput(Command):
     """Change audio devices."""
+
     def setup(self):
         self.input_key = 'F11'
         self.output_key = 'F12'
@@ -436,17 +427,14 @@ class SetOutput(Command):
             attr = 'output'
         device = getattr(self.parent, attr)
         names = device.get_device_names()
-        dlg = wx.SingleChoiceDialog(
-            self.parent,
-            'Choose a new %s device' % attr,
-            '%s Device' % attr.title(),
-            names
-        )
-        if dlg.ShowModal() == wx.ID_OK:
-            new_device = dlg.GetSelection()
-        else:
-            new_device = None
-        dlg.Destroy()
+        with wx.SingleChoiceDialog(
+            self.parent, f'Choose a new {attr} device',
+            f'{attr.title()} Device', names
+        ) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                new_device = dlg.GetSelection()
+            else:
+                new_device = None
         if new_device is not None:
             if attr == 'input':
                 positions = {}
@@ -469,37 +457,32 @@ class SetOutput(Command):
             else:
                 self.parent.setup_microphone()
             logger.info(
-                'Set %s to %s.',
-                attr,
+                'Set %s to %s.', attr,
                 device.get_device_names()[device.device - 1]
             )
 
 
 class Config(Command):
     """View and edit program configuration."""
+
     def setup(self):
         self.keys = ['CTRL+,']
 
     def run(self, key):
         """Show the configuration."""
-        dlg = wx.SingleChoiceDialog(
-            self.parent,
-            'Choose a configuration page to load',
-            'Configuration',
-            config.sections
-        )
-        if dlg.ShowModal() == wx.ID_OK:
-            section = getattr(
-                config,
-                config.sections[dlg.GetSelection()]
-            )
-            frame = SimpleConfWxDialog(section, parent=self.parent)
-            frame.Show(True)
-        dlg.Destroy()
+        with wx.SingleChoiceDialog(
+            self.parent, 'Choose a configuration page to load',
+            'Configuration', config.sections
+        ) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                section = getattr(config, config.sections[dlg.GetSelection()])
+                frame = SimpleConfWxDialog(section, parent=self.parent)
+                frame.Show(True)
 
 
 class LoadRequest(Command):
     """Load a request from the requests server."""
+
     def setup(self):
         self.key_left = 'SHIFT+A'
         self.key_right = 'SHIFT+;'
@@ -512,9 +495,7 @@ class LoadRequest(Command):
         else:
             deck = self.parent.right
         try:
-            response = get(
-                '%s/json' % config.requests['url']
-            )
+            response = http.get(f'{config.requests["url"]}/json')
             if not response.ok:
                 raise RuntimeError(
                     'Could not connect to the requests uRL. Please ensure it '
@@ -533,33 +514,22 @@ class LoadRequest(Command):
                     else:
                         request += ' requested by %s' % r['requested_by']
                 requests.append(request)
-            dlg = wx.SingleChoiceDialog(
-                self.parent,
-                'Choose a request to load',
-                'Requests',
-                requests
-            )
-            if dlg.ShowModal() == wx.ID_OK:
-                request = j[dlg.GetSelection()]
-            else:
-                request = None
-            dlg.Destroy()
-            response = get(
-                '%s/get_url/%d' % (
-                    config.requests['url'],
-                    request['id']
-                ),
-                auth=(
-                    config.requests['username'],
-                    config.requests['password']
-                )
+            with wx.SingleChoiceDialog(
+                self.parent, 'Choose a request to load', 'Requests', requests
+            ) as dlg:
+                if dlg.ShowModal() == wx.ID_OK:
+                    request = j[dlg.GetSelection()]
+                else:
+                    request = None
+            response = http.get(
+                f'{config.requests["url"]}/get_url/{request["id"]}',
+                auth=(config.requests['username'], config.requests['password'])
             )
             if not response.ok:
                 raise RuntimeError(
                     'The get_url endpoint returned a {:d} error code '
                     'for the URL {}.'.format(
-                        response.status_code,
-                        response.url
+                        response.status_code, response.url
                     )
                 )
             j = response.json()
@@ -568,8 +538,7 @@ class LoadRequest(Command):
                 raise RuntimeError(
                     'The requested track differs from the one provided by '
                     'get_url.\n\nTrack: %r\nget_url: %r' % (
-                        request,
-                        j['track']
+                        request, j['track']
                     )
                 )
             deck.set_stream(j['url'], url=True)
@@ -586,7 +555,6 @@ class GoogleSearch(Command):
         self.keys = [self.key_left, self.key_right]
 
     def run(self, key):
-        """Run the command."""
         api = self.parent.google_api
         try:
             self.parent.google_login()
@@ -597,22 +565,17 @@ class GoogleSearch(Command):
         if not results:
             return error('No search results.')
         results = [x['track'] for x in results]
-        dlg = wx.SingleChoiceDialog(
-            self.parent,
-            'Select a track',
-            'Search Results',
-            [
-                '{0[artist]} - {0[album]} - {0[trackNumber]} - '
-                '{0[title]}'.format(
-                    result
-                ) for result in results
+        with wx.SingleChoiceDialog(
+            self.parent, 'Select a track', 'Search Results',
+            ['{0[artist]} - {0[album]} - {0[trackNumber]} - {0[title]}'.format(
+                result
+            ) for result in results
             ]
-        )
-        if dlg.ShowModal() == wx.ID_OK:
-            track = results[dlg.GetSelection()]
-        else:
-            track = None
-        dlg.Destroy()
+        ) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                track = results[dlg.GetSelection()]
+            else:
+                track = None
         if track is not None:
             id = get_id(track)
             try:
@@ -635,9 +598,11 @@ class Microphone(Command):
     def run(self, key):
         if self.parent.microphone_stream.volume:
             logger.info('Microphone muted.')
+            speech.speak('Mic off.')
             self.parent.microphone_stream.volume = 0.0
         else:
             logger.info('Microphone unmuted.')
+            speech.speak('Mic on.')
             self.parent.microphone_stream.volume = 1.0
 
 
@@ -649,12 +614,7 @@ class MicrophonePan(Command):
         self.full_left = 'SHIFT+['
         self.right = ']'
         self.full_right = 'SHIFT+]'
-        self.keys = [
-            self.left,
-            self.full_left,
-            self.right,
-            self.full_right
-        ]
+        self.keys = [self.left, self.full_left, self.right, self.full_right]
 
     def run(self, key):
         amount = config.audio['change_pan']
@@ -671,6 +631,7 @@ class MicrophonePan(Command):
             amount = 1.0
         logger.info('Setting microphone pan to %f.', amount)
         self.parent.microphone_stream.set_pan(amount)
+        speech.speak('Microphone pan %.1f.' % amount)
 
 
 class ResetMicrophone(Command):
@@ -681,18 +642,17 @@ class ResetMicrophone(Command):
 
     def run(self, key):
         logger.info('Resetting the microphone.')
+        speech.speak('Reset mic.')
         self.parent.microphone_stream.pan = 0.0
 
 
 class Help(Command):
     """Show help in your web browser or enable help mode."""
+
     def setup(self):
         self.help_html_key = 'F1'
         self.parent.help_mode_key = 'SHIFT+/'
-        self.keys = [
-            self.help_html_key,
-            self.parent.help_mode_key
-        ]
+        self.keys = [self.help_html_key, self.parent.help_mode_key]
         self.environment = Environment()
         self.environment.globals.update(
             app_name=application.name,
@@ -711,21 +671,18 @@ class Help(Command):
             webbrowser.open(path)
         else:
             self.parent.help_mode = not self.parent.help_mode
-            speech.speak(
-                'Help mode %s.' %
-                ('enabled' if self.parent.help_mode else 'disabled')
+            speech.speak('Help mode %s.' % (
+                'enabled' if self.parent.help_mode else 'disabled')
             )
 
 
 class SpeakProgress(Command):
     """Speak the position of a deck."""
+
     def setup(self):
         self.left = 'SHIFT+R'
         self.right = 'SHIFT+O'
-        self.keys = [
-            self.left,
-            self.right
-        ]
+        self.keys = [self.left, self.right]
 
     def run(self, key):
         if key == self.left:
@@ -737,21 +694,17 @@ class SpeakProgress(Command):
             speech.speak('Nothing playing.')
         else:
             speech.speak(
-                '%.2f%%' % (
-                    s.get_position() * (100 / s.get_length())
-                )
+                '%.2f%%' % (s.get_position() * (100 / s.get_length()))
             )
 
 
 class ResetFrequency(Command):
     """Reset the frequency of a deck."""
+
     def setup(self):
         self.key_left = 'SHIFT+Q'
         self.key_right = 'SHIFT+P'
-        self.keys = [
-            self.key_left,
-            self.key_right
-        ]
+        self.keys = [self.key_left, self.key_right]
 
     def run(self, key):
         if key == self.key_left:
@@ -759,17 +712,16 @@ class ResetFrequency(Command):
         else:
             deck = self.parent.right
         deck.set_frequency(44100.0)
+        speech.speak('Reset frequency.')
 
 
 class ResetPan(Command):
     """Reset the pan of a deck."""
+
     def setup(self):
         self.key_left = 'SHIFT+T'
         self.key_right = 'SHIFT+Y'
-        self.keys = [
-            self.key_left,
-            self.key_right
-        ]
+        self.keys = [self.key_left, self.key_right]
 
     def run(self, key):
         if key == self.key_left:
@@ -777,6 +729,7 @@ class ResetPan(Command):
         else:
             deck = self.parent.right
         deck.set_pan(0.0)
+        speech.speak('Reset pan.')
 
 
 class RegisteredDevices(Command):
