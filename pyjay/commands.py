@@ -293,32 +293,25 @@ class SetFrequency(Command):
     """Set the frequency of a deck."""
     def setup(self):
         self.left_up = 'C'
-        self.left_reset = 'SHIFT+C'
         self.left_down = 'Z'
         self.right_up = '.'
-        self.right_reset = 'SHIFT+M'
         self.right_down = 'M'
         self.keys = [
             self.left_up,
-            self.left_reset,
             self.left_down,
             self.right_up,
-            self.right_reset,
             self.right_down
         ]
 
     def run(self, key):
-        if key in [self.left_up, self.left_reset, self.left_down]:
+        if key in [self.left_up, self.left_down]:
             deck = self.parent.left
         else:
             deck = self.parent.right
-        if key in (self.left_reset, self.right_reset):
-            amount = 44100
-        else:
-            amount = config.audio['change_frequency']
-            if key in [self.left_down, self.right_down]:
-                amount = -amount
-            amount += deck.frequency
+        amount = config.audio['change_frequency']
+        if key in [self.left_down, self.right_down]:
+            amount = -amount
+        amount += deck.frequency
         deck.set_frequency(amount)
 
 
@@ -753,7 +746,7 @@ class ResetFrequency(Command):
     """Reset the frequency of a deck."""
     def setup(self):
         self.key_left = 'SHIFT+Q'
-        self.key_right = 'SHIFT+Y'
+        self.key_right = 'SHIFT+P'
         self.keys = [
             self.key_left,
             self.key_right
@@ -771,7 +764,7 @@ class ResetPan(Command):
     """Reset the pan of a deck."""
     def setup(self):
         self.key_left = 'SHIFT+T'
-        self.key_right = 'SHIFT+P'
+        self.key_right = 'SHIFT+Y'
         self.keys = [
             self.key_left,
             self.key_right

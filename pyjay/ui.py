@@ -44,13 +44,15 @@ class MainFrame(wx.Frame):
                 cmd = cls(self)
                 self.text.AppendText(
                     '%s\n%s\n\n' % (
-                        cmd.__doc__, ', '.join(
-                            cmd.keys
-                        )
+                        cmd.__doc__, ', '.join(cmd.keys)
                     )
                 )
                 self.commands.append(cmd)
                 for key in cmd.keys:
+                    if key in self.hotkeys:
+                        raise RuntimeError(
+                            'Duplicate key %r from command %r.' % (key, cmd)
+                        )
                     self.hotkeys[key] = cmd
         self.text.SetInsertionPoint(0)
         s.Add(self.text, 1, wx.GROW)
