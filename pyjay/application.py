@@ -3,7 +3,7 @@
 import wx
 
 name = 'PyJay'
-__version__ = '0.2'
+__version__ = '0.2.0'
 
 app = wx.App()
 app.SetAppName('{} V{}'.format(name, __version__))
