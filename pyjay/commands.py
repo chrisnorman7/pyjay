@@ -346,11 +346,11 @@ class CrossFade(Command):
     """Crossfade between the two decks."""
 
     def setup(self):
-        self.key_left = 'G'
-        self.key_right = 'H'
-        self.key_centre = 'Y'
-        self.key_cut_left = 'SHIFT+G'
-        self.key_cut_right = 'SHIFT+H'
+        self.key_left = 'V'
+        self.key_right = 'N'
+        self.key_centre = 'B'
+        self.key_cut_left = 'G'
+        self.key_cut_right = 'H'
         self.keys = [
             self.key_left, self.key_right, self.key_centre, self.key_cut_left,
             self.key_cut_right
